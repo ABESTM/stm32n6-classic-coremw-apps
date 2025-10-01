@@ -42,3 +42,6 @@
 	path = Middlewares/ST/STM32_USB_Host_Library
 	url = https://github.com/STMicroelectronics/stm32-mw-usb-host.git
 	branch = master
+[submodule "Drivers/BSP/Components/rtl8211"]
+	path = Drivers/BSP/Components/rtl8211
+	url = https://github.com/STMicroelectronics/stm32-rtl8211
