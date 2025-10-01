@@ -53,13 +53,13 @@ int iar_fputc(int ch);
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 struct netif gnetif;
-UART_HandleTypeDef huart1;
+UART_HandleTypeDef UartHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void BSP_Config(void);
 static void Netif_Config(void);
-static void USART1_UART_Init(void);
+static void MX_USART1_UART_Init(void);
 static void RISAF_Config(void);
 static void MPU_Config(void);
 
@@ -89,7 +89,7 @@ int main(void)
   RISAF_Config();
 
   /* Initialize all configured peripherals */
-  USART1_UART_Init();
+  MX_USART1_UART_Init();
 
   /* Configure the LEDs ...*/
   BSP_Config();
@@ -130,7 +130,6 @@ int main(void)
 
 static void BSP_Config(void)
 {
-  BSP_LED_Init(LED_GREEN);
   BSP_LED_Init(LED_RED);
 }
 
@@ -177,45 +176,41 @@ static void Netif_Config(void)
   * @param None
   * @retval None
   */
-static void USART1_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance          = USART1;
-  huart1.Init.BaudRate   = 115200;
-  huart1.Init.Mode       = UART_MODE_TX_RX;
-  huart1.Init.Parity     = UART_PARITY_NONE;
-  huart1.Init.StopBits   = UART_STOPBITS_1;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
+  static void MX_USART1_UART_Init(void)
   {
-    Error_Handler();
+    /* USER CODE BEGIN USART1_Init 0 */
+  
+    /* USER CODE END USART1_Init 0 */
+  
+    /* USER CODE BEGIN USART1_Init 1 */
+  
+    /* USER CODE END USART1_Init 1 */
+  
+    /*##-1- Configure the UART peripheral ######################################*/
+    /* Put the USART peripheral in the Asynchronous mode (UART Mode) */
+    /* UART configured as follows:
+        - Word Length = 8 Bits (data size 8bits)
+        - Stop Bit    = One Stop bit
+        - Parity      = None
+        - BaudRate    = 115200 baud
+        - Hardware flow control disabled (RTS and CTS signals) */
+  
+    UartHandle.Instance        = USARTx;
+    UartHandle.Init.BaudRate   = 115200;
+    UartHandle.Init.WordLength = UART_WORDLENGTH_8B;
+    UartHandle.Init.StopBits   = UART_STOPBITS_1;
+    UartHandle.Init.Parity     = UART_PARITY_NONE;
+    UartHandle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+    UartHandle.Init.Mode       = UART_MODE_TX_RX;
+    UartHandle.Init.OverSampling = UART_OVERSAMPLING_16;
+  
+    if(HAL_UART_Init(&UartHandle) != HAL_OK)
+    {
+      /* Initialization Error */
+      Error_Handler();
+    }
+  
   }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
 /**
   * @brief  System Clock Configuration
   *         The system Clock is configured as follows :
@@ -362,12 +357,14 @@ size_t __write(int file, unsigned char const *ptr, size_t len)
 
 /**
   * @brief  Retargets the C library printf function to the USART.
+  * @param  None
+  * @retval None
   */
 PUTCHAR_PROTOTYPE
 {
-  /* Place your implementation of putchar here */
+  /* Place your implementation of fputc here */
   /* e.g. write a character to the USART1 and Loop until the end of transmission */
-  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);
+  HAL_UART_Transmit(&UartHandle, (uint8_t *)&ch, 1, 0xFFFF);
 
   return ch;
 }
@@ -463,17 +460,15 @@ static void RISAF_Config(void)
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
-void Error_Handler(void)
-{
-  /* User can add his own implementation to report the HAL error return state */
-  printf("Critical Error \r\n");
-  BSP_LED_Off(LED_GREEN);
-  while (1)
+  void Error_Handler(void)
   {
-    BSP_LED_Toggle(LED_RED);
-    HAL_Delay(500);
+    /* User may add here some code to deal with this error */
+    while (1)
+    {
+      BSP_LED_Toggle(LED_RED);
+      HAL_Delay(200);
+    }
   }
-}
 
 #ifdef  USE_FULL_ASSERT
 /**

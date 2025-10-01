@@ -145,7 +145,7 @@ static void low_level_init(struct netif *netif)
 
   EthHandle.Instance = ETH1;
   EthHandle.Init.MACAddr = macaddress;
-  EthHandle.Init.MediaInterface = HAL_ETH_RMII_MODE;
+  EthHandle.Init.MediaInterface = HAL_ETH_RGMII_MODE;
 
   for (int ch = 0; ch < ETH_DMA_CH_CNT; ch++)
   {
@@ -387,42 +387,64 @@ u32_t sys_now(void)
 void HAL_ETH_MspInit(ETH_HandleTypeDef *heth)
 {
   GPIO_InitTypeDef GPIO_Init;
+  GPIO_DelayTypeDef delay_conf;
   /* Prevent unused argument(s) compilation warning */
   UNUSED(heth);
   /* USER CODE BEGIN ETH_MspInit 0 */
 
   /* USER CODE END ETH_MspInit 0 */
-  /* Peripheral clock enable */
+    /* Peripheral clock enable */
   __HAL_RCC_ETH1MAC_CLK_ENABLE();
   __HAL_RCC_ETH1TX_CLK_ENABLE();
   __HAL_RCC_ETH1RX_CLK_ENABLE();
 
+  /* Enable GPIOs clocks */
+  __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOG_CLK_ENABLE();
 
-  /**ETH GPIO Configuration
-  PF7      ------> ETH_REF_CLK
-  PF4      ------> ETH_MDIO
-  PG11     ------> ETH_MDC
-  PF10     ------> ETH_CRS_DV
-  PF14     ------> ETH_RXD0
-  PF15     ------> ETH_RXD1
-  PF11     ------> ETH_TX_EN
-  PF12     ------> ETH_TXD0
-  PF13     ------> ETH_TXD1
-  */
+    /**ETH GPIO Configuration
+    PF7      ------> ETH_REF_CLK
+    PF4      ------> ETH_MDIO
+    PG11     ------> ETH_MDC
+    PF10     ------> ETH_CRS_DV
+    PF14     ------> ETH_RXD0
+    PF15     ------> ETH_RXD1
+    PF11     ------> ETH_TX_EN
+    PF12     ------> ETH_TXD0
+    PF13     ------> ETH_TXD1
+    */
 
-  GPIO_Init.Speed = GPIO_SPEED_FREQ_HIGH;
+  /* PD1,3,12 AF*/
+  GPIO_Init.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   GPIO_Init.Mode = GPIO_MODE_AF_PP;
   GPIO_Init.Pull = GPIO_NOPULL;
   GPIO_Init.Alternate = GPIO_AF11_ETH1;
-  GPIO_Init.Pin = GPIO_PIN_4  | GPIO_PIN_7  | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 |
-                  GPIO_PIN_15;
+  GPIO_Init.Pin = GPIO_PIN_1 | GPIO_PIN_3 | GPIO_PIN_12;
+  HAL_GPIO_Init(GPIOD, &GPIO_Init);
+
+  /* Configure PF2,7~15 AF */
+  GPIO_Init.Pin = GPIO_PIN_2  | GPIO_PIN_7  | GPIO_PIN_5  |
+                  GPIO_PIN_8  | GPIO_PIN_9  | GPIO_PIN_10 | GPIO_PIN_11 |
+                  GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
   HAL_GPIO_Init(GPIOF, &GPIO_Init);
 
-  GPIO_Init.Pin = GPIO_PIN_11;
+  delay_conf.Delay = GPIO_DELAY_PS_500;
+  delay_conf.Path = GPIO_PATH_IN;
+  HAL_GPIO_SetDelay(GPIOF, GPIO_PIN_7, &delay_conf);
+
+  /* Configure PG3,4 AF */
+  GPIO_Init.Pin = GPIO_PIN_3 | GPIO_PIN_4;
   HAL_GPIO_Init(GPIOG, &GPIO_Init);
 
+  /* Configure PF0 AF */
+  GPIO_Init.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  GPIO_Init.Pin =  GPIO_PIN_0;
+  GPIO_Init.Alternate = GPIO_AF12_ETH1;
+  HAL_GPIO_Init(GPIOF, &GPIO_Init);
+
+  HAL_NVIC_SetPriority(ETH1_IRQn, 7, 0);
+  HAL_NVIC_EnableIRQ(ETH1_IRQn);
   /* USER CODE BEGIN ETH_MspInit 1 */
 
   /* USER CODE END ETH_MspInit 1 */
@@ -434,7 +456,7 @@ void HAL_ETH_MspInit(ETH_HandleTypeDef *heth)
 * @param heth: ETH handle pointer
 * @retval None
 */
-void HAL_ETH_MspDeInit(ETH_HandleTypeDef *heth)
+void HAL_ETH_MspDeInit(ETH_HandleTypeDef* heth)
 {
   /* Prevent unused argument(s) compilation warning */
   UNUSED(heth);
@@ -442,27 +464,28 @@ void HAL_ETH_MspDeInit(ETH_HandleTypeDef *heth)
   /* USER CODE BEGIN ETH_MspDeInit 0 */
 
   /* USER CODE END ETH_MspDeInit 0 */
-  /* Peripheral clock disable */
+    /* Peripheral clock disable */
   __HAL_RCC_ETH1MAC_CLK_DISABLE();
   __HAL_RCC_ETH1TX_CLK_DISABLE();
   __HAL_RCC_ETH1RX_CLK_DISABLE();
 
-  /**ETH GPIO Configuration
-  PF7      ------> ETH_REF_CLK
-  PF4      ------> ETH_MDIO
-  PG11     ------> ETH_MDC
-  PF10     ------> ETH_CRS_DV
-  PF14     ------> ETH_RXD0
-  PF15     ------> ETH_RXD1
-  PF11     ------> ETH_TX_EN
-  PF12     ------> ETH_TXD0
-  PF13     ------> ETH_TXD1
-  */
-  HAL_GPIO_DeInit(GPIOF,  GPIO_PIN_4 | GPIO_PIN_7 | GPIO_PIN_10 | GPIO_PIN_11 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 |
-                  GPIO_PIN_15);
+    /**ETH GPIO Configuration
+    PF7      ------> ETH_REF_CLK
+    PF4      ------> ETH_MDIO
+    PG11     ------> ETH_MDC
+    PF10     ------> ETH_CRS_DV
+    PF14     ------> ETH_RXD0
+    PF15     ------> ETH_RXD1
+    PF11     ------> ETH_TX_EN
+    PF12     ------> ETH_TXD0
+    PF13     ------> ETH_TXD1
+    */
+    HAL_GPIO_DeInit(GPIOF,  GPIO_PIN_4|GPIO_PIN_7|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15);
 
-  HAL_GPIO_DeInit(GPIOG, GPIO_PIN_11);
+    HAL_GPIO_DeInit(GPIOG, GPIO_PIN_11);
 
+    /* ETH interrupt DeInit */
+    HAL_NVIC_DisableIRQ(ETH1_IRQn);
   /* USER CODE BEGIN ETH_MspDeInit 1 */
 
   /* USER CODE END ETH_MspDeInit 1 */
@@ -564,6 +587,14 @@ void ethernet_link_check_state(struct netif *netif)
   {
     switch (PHYLinkState)
     {
+      case RTL8211_STATUS_1000MBITS_FULLDUPLEX:
+        duplex = ETH_FULLDUPLEX_MODE;
+        speed = ETH_SPEED_1000M;
+        linkchanged = 1;
+      case RTL8211_STATUS_1000MBITS_HALFDUPLEX:
+        duplex = ETH_HALFDUPLEX_MODE;
+        speed = ETH_SPEED_1000M;
+        linkchanged = 1;
       case RTL8211_STATUS_100MBITS_FULLDUPLEX:
         duplex = ETH_FULLDUPLEX_MODE;
         speed = ETH_SPEED_100M;
@@ -584,7 +615,6 @@ void ethernet_link_check_state(struct netif *netif)
         speed = ETH_SPEED_10M;
         linkchanged = 1;
         break;
-      /* TODO: add GBit state */
       default:
         break;
     }
