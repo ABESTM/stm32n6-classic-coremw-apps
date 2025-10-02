@@ -132,6 +132,16 @@ SECTIONS
     . = ALIGN(4);
   } >ROM
 
+  .eth :
+  {
+    . = ABSOLUTE(0x341C0000);
+    *(.RxDecripSection)
+    . = ABSOLUTE(0x341C00C0);
+    *(.TxDecripSection)
+    . = ABSOLUTE(0x341C0180);
+    *(.Rx_PoolSection)
+  } >RAM
+
   /* Used by the startup to initialize data */
   _sidata = LOADADDR(.data);
 
@@ -190,24 +200,6 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
-
-  .tcp_sec (NOLOAD) :
-     {
-
-    . = ABSOLUTE(0x341EBE80);
-    *(.RxDecripSection)
-
-    . = ABSOLUTE(0x341EBF40);
-    *(.TxDecripSection)
-
-  } >RAM
-
-  .nx_data 0x341EC000 (NOLOAD):
- {
-    . = ABSOLUTE(0x341EC000);
-    *(.NetXPoolSection)
-
- } >RAM
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :
